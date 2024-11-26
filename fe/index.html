@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Upload</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+        }
+        .upload-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 400px;
+        }
+        h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        input[type="file"], input[type="text"], button {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            border: none;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .message {
+            color: green;
+            margin-top: 10px;
+        }
+        .error {
+            color: red;
+        }
+        .file-list {
+            margin-top: 20px;
+        }
+        .file-list ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        .file-list li {
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="upload-container">
+        <h1>Upload File</h1>
+        <form id="uploadForm" enctype="multipart/form-data">
+            <input type="text" id="bucket" name="bucket" placeholder="Enter Bucket Name" required>
+            <input type="file" id="file" name="file" required>
+            <button type="submit">Upload</button>
+        </form>
+        <div id="message" class="message"></div>
+        <div id="error" class="error"></div>
+
+        <!-- List Files Section -->
+        <h2>Files in Bucket</h2>
+        <div id="fileList" class="file-list">
+            <button onclick="listFiles()">Load Files</button>
+            <ul id="files"></ul>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            const bucket = document.getElementById('bucket').value;
+            const file = document.getElementById('file').files[0];
+            const formData = new FormData();
+            formData.append('bucket', bucket);
+            formData.append('file', file);
+
+            fetch('http://localhost:8080/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('message').innerText = `File uploaded successfully: ${data.message}`;
+                document.getElementById('error').innerText = '';
+            })
+            .catch(error => {
+                document.getElementById('message').innerText = '';
+                document.getElementById('error').innerText = `Error: ${error.message}`;
+            });
+        });
+
+        function listFiles() {
+            const bucket = document.getElementById('bucket').value;
+            fetch(`http://localhost:8080/list?bucket=${bucket}`)
+            .then(response => response.json())
+            .then(data => {
+                const fileList = document.getElementById('files');
+                fileList.innerHTML = ''; // Clear the list before adding new items
+                if (data.objects.length > 0) {
+                    data.objects.forEach(file => {
+                        const li = document.createElement('li');
+                        li.textContent = file;
+                        const downloadButton = document.createElement('button');
+                        downloadButton.textContent = 'Download';
+                        downloadButton.onclick = () => downloadFile(bucket, file);
+                        li.appendChild(downloadButton);
+                        fileList.appendChild(li);
+                    });
+                } else {
+                    const li = document.createElement('li');
+                    li.textContent = 'No files found.';
+                    fileList.appendChild(li);
+                }
+            })
+            .catch(error => {
+                document.getElementById('error').innerText = `Error: ${error.message}`;
+            });
+        }
+
+        function downloadFile(bucket, file) {
+            const url = `http://localhost:8080/download?bucket=${bucket}&object=${file}`;
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = file;
+            a.click();
+        }
+    </script>
+</body>
+</html>

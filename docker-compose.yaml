@@ -1,0 +1,41 @@
+services:
+  backend:
+    build:
+      context: ./be
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./be/.env
+    networks:
+      - app-network
+
+  frontend:
+    build:
+      context: ./fe
+    ports:
+      - "80:80"
+    networks:
+      - app-network
+
+  minio:
+    image: minio/minio
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_HTTP_TRACE : /tmp/minio.log
+    command: server --console-address ":9005" /data
+    volumes:  
+      - minio-data:/data
+    ports:
+      - "9000:9000"
+      - "9005:9005"
+    restart: always
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  minio-data:
